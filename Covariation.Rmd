@@ -151,5 +151,35 @@ ggplot(data = diamonds, mapping = aes(x = carat, y = price)) +
 
 # Exercise
 ```{r}
-# 1. 
+# 1. what do you need to consider when using cut_width() vs. cut_number()
+ggplot(data = diamonds, mapping = aes(x = price, color = cut_width(carat, 0.3))) +
+  geom_freqpoly(binwidth = 500)
+# plot count is not very easy to read because some carat bands may have very few diamonds, so the shape of the line is very hard to tell.
+# try plot density
+ggplot(diamonds, aes(price, ..density.., color = cut_width(carat, 0.3))) +
+  geom_freqpoly(binwidth = 500)
+
+ggplot(diamonds, aes(price, color = cut_number(carat, 20))) +
+  geom_freqpoly(binwidth = 500)
+# plot density
+ggplot(diamonds, aes(price, ..density.., color = cut_number(carat, 20))) +
+  geom_freqpoly(binwidth = 500)
+
+# When using cut_width the number in each bin may be unequal. 
+# using cut_number, Since there are equal numbers in each bin, the plot looks similar if density is used for the y aesthetic (although the values are on a different scale).
+
+# 2. visualize the distribution of carat, partitioned by price.
+library(ggstance)
+ggplot(data = diamonds, aes(x = carat, y = cut_number(price, 10))) + # cut the price into 10 bins
+  geom_boxploth()
+# the distribution of larger diamonds is more variable. 
+
+# 4. Combine two of the techniques you've learned to visualise the combined distribution of cut, carat, and price.
+ggplot(diamonds, aes(x = cut, y = cut_width(carat, 0.1))) +
+  geom_tile(aes(fill = price)) +
+  scale_fill_viridis_c()
+
+library(hexbin)
+ggplot(diamonds, aes(carat, price)) +
+  geom_hex(aes(fill = cut))
 ```
