@@ -183,3 +183,6 @@ library(hexbin)
 ggplot(diamonds, aes(carat, price)) +
   geom_hex(aes(fill = cut))
 ```
+
+# Paths and directories
+# ~ is a convenient shortcut to your home directory. Windows doesn't really have the notion of a home directory, so it instead points to your documents directory.
