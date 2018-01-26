@@ -1,0 +1,95 @@
+
+# Creating tibbles
+```{r}
+# coerce a data frame to a tibble
+library(tidyverse)
+as_tibble(iris)
+
+# create a new tibble from individual vectors with tibble(). tibble() will automatically recycle inputs of length 1
+tibble(x = 1:5,
+       y = 1,
+       z = x ^ 2 + y)
+
+# tribble(), short for transposed tibble. to lay out small amounts of data
+tribble(~x, ~y, ~z,
+        "a", 2, 3.6,
+        "b", 1, 8.5) # the formulas showed the header
+```
+
+# Print
+```{r}
+nycflights13::flights %>% 
+  print(n = 5, width = Inf) # width = Inf will print all the columns # section 10.3.1 introduces how to print
+```
+
+# Subsetting
+```{r}
+# [[ can extract by name or position; $ only extracts by name but is a little less typing.
+df <- tibble(
+  x = runif(5),
+  y = rnorm(5)
+)
+
+# extract by name
+df$x; df[["x"]]; df[[1]] # extract a column
+df[[2]] # extract a column
+df[[3,1]] # extract an element
+df %>% slice(3); df[3,] # extract a row
+
+# to use this in a pipe, you'll need a special placeholder .
+df %>% .$x
+df %>% .[["x"]]
+```
+
+# Interacting with older code
+# Some older functions don’t work with tibbles. If you encounter one of these functions, use as.data.frame() to turn a tibble back to a data.frame.
+
+# Exercise
+```{r}
+# 1. How can you tell if an object is a tibble?
+# a tibble will print 10 rows as default and always says it's a tibble and shows the type of each column. a data frame will print all the rows and columns.
+
+# 2. Compare and contrast the following operations on a data.frame and equivalent tibble. 
+df <- data.frame(abc = 1, xyz = "a")
+df$x # data frame does partial matching
+df[,"xyz"]
+df[, c("abc", "xyz")] # sometimes it returns a vector and sometimes it returns a data frame.
+
+df1 <- as_tibble(df)
+df1$x # return NULL, tibble doesn't do partial matching
+df1[,"xyz"]
+df1[, c("abc", "xyz")] # [ always returns a tibble
+
+# 3. If you have the name of a variable stored in an object, e.g. var <- "mpg", how can you extract the reference variable from a tibble?
+df <- as_tibble(mtcars)
+var <- "mpg"
+df %>% .[[var]] # can't use $, have to use [[]]. it returns a vector
+
+df %>% 
+  select(one_of(var)) # returns a tibble with only one variable
+
+# 4. Practice referring to non-syntactic names in the following data frame by (1) Extracting the variable called 1. (2) Plotting a scatterplot of 1 vs 2. (3) Creating a new column called 3 which is 2 divided by 1. (4) Renaming the columns to one, two and three.
+annoying <- tibble(
+  `1` = 1:10,
+  `2` = `1` * 2 + rnorm(length(`1`))
+)
+
+annoying %>% .$'1' # by name
+annoying %>% .[['1']] # by name
+annoying %>% .[[1]] # by position
+
+annoying %>% 
+  ggplot(aes(x = factor(.$'1'), y = .$'2')) + # when refering to non-syntactice names, you'll have to use the subsetting way to refer to them
+  geom_point()
+
+annoying %>% 
+  mutate('3' = .$'1'/.$'2') %>% 
+  rename(one = '1', two = '2', three = '3')
+
+# 5. What does tibble::enframe() do? When might you use it?
+# enframe() converts named atomic vectors or lists to 2-column data frames. deframe() converts 2-column data frames to a named vector or list.
+
+# 6. What option controls how many additional column names are printed at the footer of a tibble?
+?print.tbl_df
+print(nycflights13::flights, n_extra = 2)
+```
