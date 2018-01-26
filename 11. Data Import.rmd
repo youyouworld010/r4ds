@@ -1,0 +1,41 @@
+
+# Getting started
+```{r}
+# Sometimes there are a few lines of metadata at the top of the file. You can use skip = n to skip the first n lines; or use comment = "#" to drop all lines that start with (e.g.) #.
+read_csv("The first line of metadata
+         The second line of metadata
+         x,y,z
+         1,2,3", skip = 2)
+read_csv("# A comment I want to skip
+         x,y,z
+         1,2,3", comment = "#")
+
+# the data might not have column names, use col_names = FALSE to tell read_csv() not to treat the first row as headings.
+read_csv("1,2,3 \n 4,5,6", col_names = FALSE) # will use X1 to Xn as headings
+
+# pass col_names a character vector which will be used as the column names
+read_csv("1,2,3 \n 4,5,6", col_names = c("x", "y", "z"))
+
+# specify the values that are used to represent missing values in your file
+read_csv("a,b,c\n1,2,.", na = ".")
+```
+
+#Exercise
+```{r}
+# 1. What function would you use to read a file where fields were separated with “|”?
+read_delim("a|b|c \n1|3|5", delim = "|")
+
+# 2. Apart from file, skip, and comment, what other arguments do read_csv() and read_tsv() have in common?
+?read_csv
+
+# 3. What are the most important arguments to read_fwf()?
+?read_fwf
+#fwf_widths, fwf_positions
+
+# 4. What arguments do you need to specify to read the following text into a data frame? "x,y\n1,'a,b'"
+read_delim("x,y\n1,'a,b'", delim = ",", quote = "'") # though the string is separated by comma, you can't use read_csv because the string 'a,b'.
+
+# 5. Identify what is wrong with each of the following inline CSV files.
+read_csv("a,b\n1,2,3\n4,5,6") # don't have three variables. the data look like a,b 1,2 4,5
+read_csv("a,b,c\n1,2\n1,2,3,4") # the data look like a,b,c 1,2, NA 1,2,3
+```
