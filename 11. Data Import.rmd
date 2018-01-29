@@ -20,7 +20,7 @@ read_csv("1,2,3 \n 4,5,6", col_names = c("x", "y", "z"))
 read_csv("a,b,c\n1,2,.", na = ".")
 ```
 
-#Exercise
+# Exercise
 ```{r}
 # 1. What function would you use to read a file where fields were separated with “|”?
 read_delim("a|b|c \n1|3|5", delim = "|")
@@ -38,4 +38,151 @@ read_delim("x,y\n1,'a,b'", delim = ",", quote = "'") # though the string is sepa
 # 5. Identify what is wrong with each of the following inline CSV files.
 read_csv("a,b\n1,2,3\n4,5,6") # don't have three variables. the data look like a,b 1,2 4,5
 read_csv("a,b,c\n1,2\n1,2,3,4") # the data look like a,b,c 1,2, NA 1,2,3
+read_csv("a,b\n\"1") # the data look like a,b 1,NA
+read_csv("a,b\n1,2\na,b") # the data look like a,b 1,2 a,b
+read_csv("a;b\n1;3") # read_csv() doesn't parse semi-colon
+```
+
+# Parsing a vector
+```{r}
+# Like all functions in the tidyverse, the parse_*() functions are uniform: the first argument is a character vector to parse, and the na argument specifies which strings should be treated as missing:
+parse_integer(c("1", "231", ".", "456"), na = ".")
+
+x <- parse_integer(c("123", "345", "abc", "123.45")) # if parsing fails, you'll get a warning
+x
+# If there are many parsing failures, you’ll need to use problems() to get the complete set. This returns a tibble, which you can then manipulate with dplyr.
+problems(x)
+```
+
+# Numbers
+```{r}
+# parse_double() addresses the problem of using different symbols to separate whole and decimal numbers in different countries.
+parse_double("1.23")
+parse_double("1,23", locale = locale(decimal_mark = ",")) # the default locale is US-centric
+
+# parse_number() ignores non-numeric characters before and after the number.
+parse_number("$100")
+parse_number("20%")
+parse_number("It cost $123.45")
+
+# the combination of parse_number() and the locale as parse_number() will ignore the “grouping mark” (the grouping marks make it easy to read numbers):
+parse_number("$123,456,789") # used in America
+parse_number("123.456.789", locale = locale(grouping_mark = ".")) # used in many parts of Europe
+parse_number("123'456'789", locale = locale(grouping_mark = "'"))
+```
+
+# 11.3.2 Strings (encoding)
+```{r}
+charToRaw("for") # underlying representation of a string; this function will give hexadecimal numbers that represent the string. The mapping from hexadecimal number to character is called the encoding, and in this case the encoding is called ASCII which does a great job of representing English characters.
+
+# readr uses UTF-8 everywhere. UTF-8 can encode just about every character used by humans today, as well as many extra symbols.
+x1 <- "El Ni\xf1o was particularly bad this year"
+x2 <- "\x82\xb1\x82\xf1\x82\xc9\x82\xbf\x82\xcd"
+parse_character(x1, locale = locale(encoding = "Latin1")) # specify the encoding
+parse_character(x2, locale = locale(encoding = "Shift-JIS"))
+
+# you can use guess_encoding() to help you figure out the encoding. it's not foolproof though. The first argument to guess_encoding() can either be a path to a file, or, as in this case, a raw vector.
+guess_encoding(charToRaw(x1))
+guess_encoding(charToRaw(x2))
+```
+
+# Factors
+```{r}
+# parse_factor() a vector of known levels to generate a warning whenever an unexpected value is present:
+fruit <- c("apple", "banana")
+parse_factor(c("apple", "banana", "bananana"), levels = fruit)
+```
+
+# Dates, date-times and times
+```{r}
+parse_datetime("2010-10-01T2010")
+parse_datetime("20101010")
+
+parse_date("2010-10-01")
+
+parse_time("01:10 am")
+parse_time("20:10:01")
+```
+
+# Exercise
+```{r}
+# 1. What are the most important arguments to locale()?
+# decimal_mark, grouping_mark, encoding
+
+# 2. What happens if you try and set decimal_mark and grouping_mark to the same character? What happens to the default value of grouping_mark when you set decimal_mark to “,”? What happens to the default value of decimal_mark when you set the grouping_mark to “.”?
+x <- "123,456719"
+parse_number(x, locale = locale(decimal_mark = ",")) 
+# decimal_mark and grouping_mark must be different. 
+# If the decimal_mark is set to the comma, then the grouping mark is set to the period
+# If the grouping mark is set to a period, then the decimal mark is set to a comma
+
+# 3. what do date_format and time_format options to locale() do? 
+
+# 6. What are the most common encodings used in Europe? What are the most common encodings used in Asia?
+```
+The following was taken from this github work https://jrnold.github.io/r4ds-exercise-solutions/data-import.html#exercises-15
+
+UTF-8 is standard now, and ASCII has been around forever.
+
+For the European languages, there are separate encodings for Romance languages and Eastern European languages using Latin script, Cyrillic, Greek, Hebrew, Turkish: usually with separate ISO and Windows encoding standards. There is also Mac OS Roman.
+
+For Asian languages Arabic and Vietnamese have ISO and Windows standards. The other major Asian scripts have their own:
+
+    Japanese: JIS X 0208, Shift JIS, ISO-2022-JP
+    Chinese: GB 2312, GBK, GB 18030
+    Korean: KS X 1001, EUC-KR, ISO-2022-KR
+
+The list in the documentation for stringi::stri_enc_detect is pretty good since it supports the most common encodings:
+
+    Western European Latin script languages: ISO-8859-1, Windows-1250 (also CP-1250 for code-point)
+    Eastern European Latin script languages: ISO-8859-2, Windows-1252
+    Greek: ISO-8859-7
+    Turkish: ISO-8859-9, Windows-1254
+    Hebrew: ISO-8859-8, IBM424, Windows 1255
+    Russian: Windows 1251
+    Japanese: Shift JIS, ISO-2022-JP, EUC-JP
+    Korean: ISO-2022-KR, EUC-KR
+    Chinese: GB18030, ISO-2022-CN (Simplified), Big5 (Traditional)
+    Arabic: ISO-8859-6, IBM420, Windows 1256
+
+# Parsing a file
+```{r}
+challenge <- read_csv(readr_example("challenge.csv"))
+problems(challenge)
+
+# to fix it
+challenge <- read_csv(readr_example("challenge.csv"),
+                      col_types = cols(
+  x = col_double(),
+  y = col_date()
+))
+tail(challenge)
+
+# other strategies
+challenge2 <- read_csv(readr_example("challenge.csv"), guess_max = 1001) # default is that readr reads in 1000 rows to figure out the type of each column. guess_max over rides the default.
+
+# read in all the columns as characters
+challenge2 <- read_csv(readr_example("challenge.csv"), col_types = cols(.default = col_character()))
+```
+
+# Writing to a file
+```{r}
+# write_csv(), write_tsv() write data back to disk. always encoding strings in UTF-8; saving dates and date-times in ISO8601 format.
+# If you want to export a csv file to Excel, use write_excel_csv(). 
+
+# write_csv(), then read_csv() can cause the column types changed everytime you read it in. instead, you can use write_rds(), read_rds() which doesn't change the column types. 
+write_rds(challenge, "challenge.rds")
+read_rds("challenge.rds")
+```
+
+# Other types of data
+```{r}
+# haven reads SPSS, Stata and SAS files
+# read_sav(), write_sav()
+library(haven)
+read_sav("test.sav")
+# readxl reads excel files (both .xls and .xlsx)
+library(readxl)
+item <- read_xlsx("items.xlsx")
+item <- read_xls("items.xls")
 ```
