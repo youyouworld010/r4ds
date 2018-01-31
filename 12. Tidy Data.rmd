@@ -1,0 +1,207 @@
+# Tidy Data (Exercise)
+```{r}
+# 1. Compute the rate for table2, and table4a + table4b
+table1 <- tribble(~country, ~year, ~cases, ~population,
+                "Afghanistan", 1999, 745, 19987071,
+                "Afghanistan", 2000, 2666, 20595360,
+                "Brazil", 1999, 37737, 172006362,
+                "Brazil", 2000, 80488, 174504898,
+                "China", 1999, 212258, 1272915272,
+                "China", 2000, 213766, 1280428583)
+library(reshape2)
+table2 <- melt(table1, id.vars = c("country", "year"), variable.name = "type", value.name = "count")
+case <- table2 %>% 
+  filter(type == "cases") %>% 
+  .[["count"]]
+country <- table2 %>% 
+  filter(type == "cases") %>% 
+  .[["country"]]
+year <- table2 %>% 
+  filter(type == "cases") %>% 
+  .[["year"]]
+pop <- table2 %>% 
+  filter(type == "population") %>% 
+  .[["count"]]
+data <- tibble(country = country,
+               year = year,
+               rate = case/pop*10000)
+
+ctable <- table2 %>% 
+  filter(type == "cases") %>% 
+  select(-type)
+casetable <- dcast(ctable, country ~ year)
+ptable <- table2 %>% 
+  filter(type == "population") %>% 
+  select(-type)
+poptable <- dcast(ptable, country ~ year)
+```
+
+# Gathering
+```{r}
+# Gather takes multiple columns and collapses into key-value pairs
+ctidy <- casetable %>% 
+  gather('1999', '2000', key = "year", value = "cases")
+
+ptidy <- poptable %>% 
+  gather('1999', '2000', key = "year", value = "population")
+
+# to combine the tidied versins of case and pop tables into a single tibble, we need to use left_join() function.
+left_join(ctidy, ptidy)
+```
+
+# Spreading
+```{r}
+spread(table2, key = "type", value = "count")
+```
+
+# Exercise
+```{r}
+# 1. Why are gather() and spread() not perfectly symmetrical?
+stocks <- tibble(
+  year   = c(2015, 2015, 2016, 2016),
+  half  = c(   1,    2,     1,    2),
+  return = c(1.88, 0.59, 0.92, 0.17)
+)
+stocks %>% 
+  spread(key = "year", value = "return")
+
+stocks %>% 
+  spread(key = "year", value = "return") %>% # key and value equal to the variable names in the data
+  gather('2015', '2016', key = "year", value = "return") # key and value equal to a new variable names that you create.
+
+# the column type information is not transferred between them. Variable names are always converted to a character vector by gather(). convert argument if true, will automatically run type.convert() on the key column. This is useful if the column names are actually numeric, integer, or logical.
+
+stocks %>% 
+  spread(key = "year", value = "return") %>% 
+  gather('2015', '2016', key = "year", value = "return", convert = TRUE)
+
+# 2. why does this code fail? casetable %>% gather(1999, 2000, key = "year", value = "cases")
+# 1999 and 2000 are non-syntactic variable names, so they need to be quoted. Otherwise gather() will look for the 1999th and 2000th columns.
+casetable %>% gather('1999', '2000', key = "year", value = "cases") # this will work
+
+# 3. Why does spreading this tibble fail? How could you add a new column to fix the problem?
+people <- tribble(
+  ~name,             ~key,    ~value,
+  #-----------------|--------|------
+  "Phillip Woods",   "age",       45,
+  "Phillip Woods",   "height",   186,
+  "Phillip Woods",   "age",       50,
+  "Jessica Cordero", "age",       37,
+  "Jessica Cordero", "height",   156
+)
+# spreading this tibble would fail because there is a duplicate identifer for row 1 and 3. add an observation identifier
+people2 <- tribble(
+  ~name,             ~key,    ~value, ~obs,
+  #-----------------|--------|------|------
+  "Phillip Woods",   "age",       45, 1,
+  "Phillip Woods",   "height",   186, 1,
+  "Phillip Woods",   "age",       50, 2,
+  "Jessica Cordero", "age",       37, 1,
+  "Jessica Cordero", "height",   156, 1
+)
+spread(people2, key = "key", value = "value")
+
+# 4. Tidy the simple tibble below. Do you need to spread or gather it? What are the variables?
+preg <- tribble(
+  ~pregnant, ~male, ~female,
+  "no",     NA,    10,
+  "yes",    31,    31
+)
+preg %>% gather(male, female, key = "gender", value = "age")
+```
+
+# Separate
+```{r}
+# separate() pulls apart one column into multiple columns, by splitting wherever a separator character appears
+table3 <- tribble(~country, ~year, ~rate, 
+                "Afghanistan", 1999, "745/19987071",
+                "Afghanistan", 2000, "2666/20595360",
+                "Brazil", 1999, "37737/172006362",
+                "Brazil", 2000, "80488/174504898",
+                "China", 1999, "212258/1272915272",
+                "China", 2000, "213766/1280428583")
+table3 %>% 
+  separate(rate, into = c("cases", "population")) # by default, separate() will split values whenever it sees a non-alphanumeric character. 
+table3 %>% 
+  separate(rate, into = c("cases", "population"), sep = "/") # the column type of cases and population is character. this is the default setting for separate(). It leaves the type of the column as is. you can use convert argument to convert it to better types.
+table3 %>% 
+  separate(rate, into = c("cases", "population"), sep = "/", convert = TRUE)
+# You can also pass a vector of integers to sep. separate() will interpret the integers as positions to split at. Positive values start at 1 on the far-left of the strings; negative value start at -1 on the far-right of the strings.
+table3 %>% 
+  separate(year, into = c("century", "year"), sep = 2) # or sep = -3
+```
+
+# Unite
+```{r}
+# unite() is the inverse of separate(). It combines multiple columns into a single column.
+table5 <- table3 %>% 
+  separate(year, into = c("century", "year"), sep = 2)
+table5 %>% 
+  unite(new, century, year) # by default, the connector is "_"
+table5 %>% 
+  unite(new, century, year, sep = "")
+```
+
+# Exercise
+```{r}
+# 1. What do the extra and fill arguments do in separate()? 
+# extra and fill arguments all have something to do with the sep argument.
+tibble(x = c("a,b,c", "d,e,f,g", "h,i,j")) %>% 
+  separate(x, c("one", "two", "three"), extra = "merge")# by default, it will drop the extra element and gives a warning. if set extra="drop", it will drop and not give a warning. If set extra ="merge", the elements in location 2 will be separate into d e f,g
+
+tibble(x = c("a,b,c", "d,e", "f,g,i")) %>% 
+  separate(x, c("one", "two", "three"), fill = "left") # when there aren't enough elements, using fill argument. by default, it will fill from the right and give a warning. if set fill = "right", it will fill the missing values from the right. if set fill = "left", it will fill the missing values from the left.
+
+# 2. Both unite() and separate() have a remove argument. What does it do? Why would you set it to FALSE?
+# the remove argument will remove the input columns from the output. keeping them in the output will help to check the function does what you want it to do. 
+
+# 3. Compare and contrast separate() and extract(). Why are there three variations of separation (by position, by separator, and with groups), but only one unite?
+?extract()
+# The function extract uses a regular expression to find groups and split into columns.
+```
+
+# Missing Values
+```{r}
+stocks <- tibble(
+  year   = c(2015, 2015, 2015, 2015, 2016, 2016, 2016),
+  qtr    = c(   1,    2,    3,    4,    2,    3,    4),
+  return = c(1.88, 0.59, 0.35,   NA, 0.92, 0.17, 2.66)
+)
+
+stocks %>% 
+  spread(key = "year", value = "return")
+# Because these explicit missing values may not be important in other representations of the data, you can set na.rm = TRUE in gather() to turn explicit missing values implicit:
+stocks %>% 
+  spread(key = "year", value = "return") %>% 
+  gather('2015','2016', key = "year", value = "return", na.rm = TRUE)
+
+# Another important tool for making missing values explicit in tidy data is complete()
+stocks %>% 
+  complete(year, qtr)
+
+# Sometimes when a data source has primarily been used for data entry, missing values indicate that the previous value should be carried forward:
+treatment <- tribble(
+  ~ person,           ~ treatment, ~response,
+  "Derrick Whitmore", 1,           7,
+  NA,                 2,           10,
+  NA,                 3,           9,
+  "Katherine Burke",  1,           4
+)
+# the NA here should be same with the first person's name. You can use fill() here
+treatment %>% 
+  fill(person) # Fills missing values using the previous entry.
+```
+
+# Exercise
+```{r}
+# 1. Compare and contrast the fill arguments to spread() and complete()
+# the fill argument in the spread() function, if sets, the missing value (both implicit and explicit) will be replaced by it. 
+# the fill argument in the complete() function, if sets, supplies a single value to use instead of NA for missing combinations for each variable.
+
+# 2. What does the direction argument to fill() do?
+# Direction in which to fill missing values. Currently either "down" (the default) or "up".
+treatment %>% 
+  fill(person, .direction = "down") # take the name from the first entry. make sure the argument is written as .direction =
+treatment %>% 
+  fill(person, .direction = "up") # take the name from the last entry
+```

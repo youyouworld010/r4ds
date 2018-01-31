@@ -1,0 +1,55 @@
+
+# Case Study
+```{r}
+who
+```
+
+# Tidy the data
+```{r}
+# gather together the columns that are not variables.
+who1 <- who %>% 
+  gather(new_sp_m014:newrel_f65, key = "key", value = "cases", na.rm = TRUE)
+who1
+who1 %>% 
+  count(key)
+# fix the variable names to be consistent
+who2 <- who1 %>% 
+  mutate(key = stringr::str_replace(key, "newrel", "new_rel"))
+# separate the values in each code
+who3 <- who2 %>% 
+  separate(key, into = c("new", "type", "sexage"), sep = "_")
+who4 <- who3 %>% 
+  select(-new, -iso2, -iso3)
+who5 <- who4 %>% 
+  separate(sexage, into = c("sex", "age"), sep = 1)
+```
+
+# Exercises
+```{r}
+# 3. I claimed that iso2 and iso3 were redundant with country. Confirm this claim.
+who1 %>% 
+  group_by(country, iso2, iso3) %>% 
+  count() %>% # 219 entries
+  ungroup() %>% 
+  count(country) # 219 entries
+
+# alternatively
+select(who1, country, iso2, iso3) %>%
+  distinct() %>%
+  group_by(country) %>%
+  filter(n() > 1)
+
+# 4. For each country, year, and sex compute the total number of cases of TB. Make an informative visualisation of the data.
+summary <- who5 %>% 
+  group_by(country, year, sex) %>% 
+  summarise(total = sum(cases))
+summary %>% 
+  ggplot(aes(x = factor(year), y = country, color = sex)) +
+  geom_tile(aes(fill = total))
+# from the plot, we can see most of the countries have data after 1994, so we'll filter out data before 1995.
+summary %>% 
+  filter(year > 1994) %>% 
+  ggplot(aes(x = factor(year), y = country)) +
+  geom_tile(aes(fill = total)) +
+  facet_wrap(~sex, nrow = 2)
+```
