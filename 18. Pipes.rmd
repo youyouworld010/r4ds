@@ -1,0 +1,50 @@
+# Preparation
+```{r}
+library(magrittr) # the pipe %>% operation comes from the magrittr package.
+```
+
+# Piping alternatives
+```{r}
+# pryr::object_size() gives the memory occupied by all of its arguments. The built-in object.size() only takes a single object so it can't compute how data is shared across multiple objects.
+
+# the pipe won't work for two classes of funtions: 
+# 1. functions that use the current environment.
+assign("x", 10)
+x
+"x" %>% assign(100)
+x
+
+# be explicit about the environment
+env <- environment()
+"x" %>% assign(100, envir = env)
+x
+# functions assign(), get(), load() all have this problem
+
+# 2. functions that use lazy evaluation. functions that have this problem include tryCatch(), try(), supressMessages(), suppressWarnings()
+
+# when not to use the pipes: 1. when your pipes are longer than 10 steps. break it down to intermediate steps. 2. you have multiple inputs or outputs
+```
+
+# Other tools from magrittr
+```{r}
+# When working with more complex pipes, it’s sometimes useful to call a function for its side-effects. Maybe you want to print out the current object, or plot it, or save it to disk. Many times, such functions don’t return anything, effectively terminating the pipe. To work around this problem, you can use the “tee” pipe. %T>%
+rnorm(100) %>% 
+  matrix(ncol = 2) %>% 
+  plot() %>% 
+  str()
+
+rnorm(100) %>% 
+  matrix(ncol = 2) %T>% 
+  plot() %>%
+  str()
+
+# If you’re working with functions that don’t have a data frame based API
+mtcars %$%
+  cor(disp,mpg)
+
+# For assignment magrittr provides the %<>% operator which allows you to replace code like:
+mtcars <- mtcars %>% 
+  transform(cyl = cyl * 2)
+
+mtcars %<>% transform(cyl = cyl * 2) 
+```
