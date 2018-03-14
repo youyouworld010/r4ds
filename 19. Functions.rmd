@@ -1,0 +1,252 @@
+# When should you write a function? Exercise
+```{r}
+# 1. Why is TRUE not a parameter to rescale01()? What would happen if x contained a single missing value, and na.rm was FALSE?
+# TRUE is the value of an argument in the function. If x contained a single missing value and na.rm=FALSE, it will return NA. missing values are contagious.
+
+# 2. In the second variant of rescale01(), infinite values are left unchanged. Rewrite rescale01() so that -Inf is mapped to 0, and Inf is mapped to 1.
+rescale01 <- function(x){
+  rng <- range(x, na.rm = TRUE, finite = TRUE)
+  y <- (x - rng[1])/(rng[2]-rng[1])
+  y[y==Inf] <- 1
+  y[y==-Inf] <- 0
+  y
+}
+rescale01(c(NA, 1:5, Inf, -Inf))
+
+# 3. Practice turning the following code snippets into functions. Think about what each function does. What would you call it? How many arguments does it need? Can you rewrite it to be more expressive or less duplicative?    mean(is.na(x))    x / sum(x, na.rm = TRUE)    sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE)
+prop <- function(x){
+  mean(is.na(x))
+} # get the proporation of NA in a string
+prop(c(1,2,3,NA))
+
+cum <- function(x){
+  x / sum(x, na.rm = TRUE)
+}
+cum(c(1,2,3,NA))
+
+scale <- function(x){
+  sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE)
+}
+scale(c(1,2,3,NA))
+
+# 4. Follow http://nicercode.github.io/intro/writing-functions.html to write your own functions to compute the variance and skew of a numeric vector.
+
+# 5. Write both_na(), a function that takes two vectors of the same length and returns the number of positions that have an NA in both vectors.
+both_na <- function(x, y){
+  if(length(x) != length(y)){
+    stop("The two vectors are not of the same length!")
+  }
+  if(length(x) == length(y)){
+    str_locate_all(c(x,y), "NA")
+  }
+}
+x <- str_c(2,3,4,"NA", 1, "NA")
+y <- str_c(1,"NA",3,4,5,6)
+library(stringr)
+both_na(x, y)
+
+both_na1 <- function(x,y){
+  if(length(x) != length(y)){
+    stop("The two vectors are not of the same length!")
+  }
+  if(length(x) == length(y)){
+    sum(is.na(x) & is.na(y))
+  }
+}
+both_na1(c(2,3,4,NA, 1, NA),
+         c(1,NA,3,NA,5,NA))
+
+# 6. What do the following functions do? Why are they useful even though they are so short?
+is_directory <- function(x) file.info(x)$isdir
+is_readable <- function(x) file.access(x, 4) == 0
+```
+
+# Functions are for humans and computers
+```{r}
+# function names should be verb+noun, like impute_missing(), collapse_years()
+# Cmd/Ctrl + Shift + R can create a section header, it only works in the regular R file, not in rmarkdown
+```
+
+# Exercises
+```{r}
+# 1. Read the source code for each of the following three functions, puzzle out what they do, and then brainstorm better names.
+check_prefix <- function(string, prefix) {
+  substr(string, 1, nchar(prefix)) == prefix
+}
+check_prefix("ColoradoStudents", "Col")
+
+drop_last <- function(x) {
+  if (length(x) <= 1) return(NULL)
+  x[-length(x)]
+}
+drop_last(c("banana", "apple", "orange"))
+
+duplicate <- function(x, y) {
+  rep(y, length.out = length(x))
+}
+duplicate(c("a", "c", "b"), 5)
+```
+
+# Conditional execution
+```{r}
+?'if'
+# a function returns the last value that it computed. the condition must evaluate to either TRUE or FALSE. if it's a vector, you'll get a warning message; if it's an NA, you'll get an error.
+# You can use || (or) and && (and) to combine multiple logical expressions. as soon as || sees the first TRUE it returns TRUE without computing anything else. As soon as && sees the first FALSE it returns FALSE. You should never use | or & in an if statement: these are vectorised operations that apply to multiple values 
+# And remember, x == NA doesn’t do anything useful!
+
+# switch() evaluates EXPR and accordingly chooses one of the further arguments (in ...).
+operation <- function(x, y, op){
+  switch(op, 
+         plus = x + y,
+         minus = x - y,
+         times = x * y,
+         divide = x / y,
+         stop("Unknown op!"))
+}
+operation(2, 3, "plus")
+```
+
+# Exercise
+```{r}
+# 1. What’s the difference between if and ifelse()? Carefully read the help and construct three examples that illustrate the key differences.
+
+# 2. Write a greeting function that says “good morning”, “good afternoon”, or “good evening”, depending on the time of day. (Hint: use a time argument that defaults to lubridate::now(). That will make it easier to test your function.)
+greeting <- function(time = now()){
+  hr <- hour(time)
+  if(hr < 12){
+    "good morning"
+  } else if(hr >= 12 && hr < 17){
+    "good afternoon"
+  } else{
+    "good evening"
+  }
+}
+
+# 3. Implement a fizzbuzz function. It takes a single number as input. If the number is divisible by three, it returns “fizz”. If it’s divisible by five it returns “buzz”. If it’s divisible by three and five, it returns “fizzbuzz”. Otherwise, it returns the number. Make sure you first write working code before you create the function.
+fizzbuzz <- function(x){
+  if(x %% 3 == 0 && x %% 5 == 0){
+    "fizzbuzz"
+  } else if(x %% 5 == 0){
+    "buzz"
+  } else if (x %% 3 == 0){
+    "fizz"
+  } else{
+    x
+  }
+} # you have to put "If it’s divisible by three and five" as the first if condition. 
+fizzbuzz(8)
+
+# 4. How could you use cut() to simplify this set of nested if-else statements?
+temp <- function(x){
+  if (x <= 0) {
+  "freezing"
+} else if (x <= 10) {
+  "cold"
+} else if (x <= 20) {
+  "cool"
+} else if (x <= 30) {
+  "warm"
+} else {
+  "hot"
+}
+}
+
+temp <- seq(-10, 50, by = 5)
+cut(temp, c(-Inf, 0, 10, 20, 30, Inf), right = TRUE, labels = c("freezing", "cold", "cool", "warm", "hot"))
+# How would you change the call to cut() if I’d used < instead of <=? What is the other chief advantage of cut() for this problem? (Hint: what happens if you have many values in temp?)
+# if I’d used < instead of <=, we need to change right=FALSE. cut() can work on a vector
+
+# 5. What happens if you use switch() with numeric values?
+# It selects that number argument from ....
+switch(2, "one", "four", "five")
+
+# What does this switch() call do? What happens if x is “e”?
+switch(x, 
+  a = ,
+  b = "ab",
+  c = ,
+  d = "cd"
+)
+```
+
+# Function arguments
+```{r}
+# Generally, data arguments should come first. Detail arguments should go on the end, and usually should have default values. You specify a default value in the same way you call a function with a named argument:
+mean_ci <- function(x, conf = 0.95) { # specify a default value for confidence interval
+  se <- sd(x) / sqrt(length(x))
+  alpha <- 1 - conf
+  mean(x) + se * qnorm(c(alpha / 2, 1 - alpha / 2))
+}
+x <- runif(100)
+mean_ci(x)
+mean_ci(x, conf = 0.99)
+# the default value should always be the most common value
+
+# Checking values
+wt_mean <- function(x, w, na.rm = FALSE) {
+  stopifnot(is.logical(na.rm), length(na.rm) == 1) # use stopifnot() to give warning. it gives a generic error message if not
+  stopifnot(length(x) == length(w))
+  
+  if (na.rm) {
+    miss <- is.na(x) | is.na(w)
+    x <- x[!miss]
+    w <- w[!miss]
+  }
+  sum(w * x) / sum(w)
+}
+wt_mean(1:6, 6:1, na.rm = "foo")
+
+# Dot-dot-dot (...)
+commas <- function(...) stringr::str_c(..., collapse = ", ")
+commas(letters[1:10])
+
+rule <- function(..., pad = "-"){
+  title <- paste0(...)
+  width <- getOption("width") - nchar(title) - 5
+  cat(title, " ", stringr::str_dup(pad, width), "\n", sep = "")
+}
+rule("Important output")
+```
+
+# Exercises
+```{r}
+# 1. What does commas(letters, collapse = "-") do? Why?
+commas(letters, collapse = "-") # it will throw an error message. there are two arguments called collapse.
+
+# 2. It’d be nice if you could supply multiple characters to the pad argument, e.g. rule("Title", pad = "-+"). Why doesn’t this currently work? How could you fix it?
+rule("Title", pad = "-+") # it does work. the pad= argument overwrites the default
+
+rule2 <- function(..., pad = "-+"){
+  title <- paste0(...)
+  width <- getOption("width") - nchar(title) - 5
+  cat(title, " ", stringr::str_dup(pad, width), "\n", sep = "")
+}
+rule2("Important output")
+
+# 3. What does the trim argument to mean() do? When might you use it?
+# If trim is non-zero, a symmetrically trimmed mean is computed with a fraction of trim observations deleted from each end before the mean is computed. You might use it when there are extreme values in the numbers which can cause mean to be biased.
+x <- c(0:10, 50)
+xm <- mean(x)
+c(xm, mean(x, trim = 0.10))
+
+# 4. The default value for the method argument to cor() is c("pearson", "kendall", "spearman"). What does that mean? What value is used by default? 
+# a character string indicating which correlation coefficient (or covariance) is to be computed. One of "pearson" (default), "kendall", or "spearman": can be abbreviated.
+```
+
+# Return values
+```{r}
+# The value returned by the function is usually the last statement it evaluates, but you can choose to return early by using return(). I think it’s best to save the use of return() to signal that you can return early with a simpler solution. 
+
+show_missings <- function(df) {
+  n <- sum(is.na(df))
+  cat("Missing values: ", n, "\n", sep = "")
+  
+  invisible(df) # the invisible() means that the input df doesn’t get printed out
+}
+show_missings(mtcars) # the result is still a data frame, so we can use it in a pipe:
+
+mtcars %>% 
+  show_missings() %>% 
+  mutate(mpg = ifelse(mpg < 20, NA, mpg)) %>% 
+  show_missings() 
+```
