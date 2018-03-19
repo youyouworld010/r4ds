@@ -1,0 +1,255 @@
+# Preparation
+```{r}
+library(tidyverse)
+```
+
+# Vector basics
+```{r}
+# NULL is often used to represent the absence of a vector (as opposed to NA which is used to represent the absence of a value in a vector). NULL typically behaves like a vector of length 0.
+
+# every vector has two key properties: type and length
+typeof(letters); typeof(1:10)
+x <- list("a", "b", 1:10); length(x)
+
+# augmented vectors include factors, dates and data frames
+```
+
+# Important types of atomic vector
+```{r}
+# Logical vectors can only take three possible values: TRUE, FALSE and NA
+1:10 %% 3 == 0
+c(TRUE, FALSE, TRUE, NA)
+
+# integer and double vectors are known collectively as numeric vectors. In R, numbers are doubles by default. To make an integer, place an L after the number.
+typeof(1)
+typeof(1L)
+1.5L
+
+# Doubles are approximations. Doubles represent floating point numbers that can not always be precisely represented with a fixed amount of memory. This means that you should consider all doubles to be approximations. 
+x <- sqrt(2) ^ 2
+x
+x - 2 # it's not zero. This behaviour is common when working with floating point numbers: most calculations include some approximation error. Instead of comparing floating point numbers using ==, you should use dplyr::near() which allows for some numerical tolerance.
+
+# Integers have one special value: NA, while doubles have four: NA, NaN, Inf and -Inf. All three special values NaN, Inf and -Inf can arise during division
+c(-1, 0, 1) / 0
+# Avoid using == to check for these other special values. Instead use the helper functions is.finite(), is.infinite(), and is.nan()
+```
+
+# Exercises
+```{r}
+# 1. Describe the difference between is.finite(x) and !is.infinite(x).
+# is.finite() considers a number to be finite. !is.infinite() considers 0, NA, NaN not infinite.
+
+# 2. Read the source code for dplyr::near() (Hint: to see the source code, drop the ()). How does it work?
+dplyr::near
+# This is a safe way of comparing if two vectors of floating point numbers are (pairwise) equal. This is safer than using ==, because it has a built in tolerance
+
+# 3. A logical vector can take 3 possible values. How many possible values can an integer vector take? How many possible values can a double take? Use google to do some research.
+
+# 4. Brainstorm at least four functions that allow you to convert a double to an integer. How do they differ? Be precise.
+
+# 5. What functions from the readr package allow you to turn a string into logical, integer, and double vector?
+# The functions parse_logical, parse_integer, and parse_number.
+```
+
+# Using atomic vectors
+```{r}
+# Coercion
+
+# Explicit coercion happens when you call a function like as.logical(), as.integer(), as.double(), or as.character(). Whenever you do this, you should check whether you can make the fix upstream.
+x <- sample(20, 100, replace = TRUE)
+y <- x > 10
+sum(y) # how many are greater than 10
+mean(y) # what proportion are greater than 10
+
+# Test functions
+# is_logical(), is_integer(), is_double(), is_numeric(), is_character(), is_atomic(), is_list(), is_vector() checks the type of the vector. Each predicate comes with a "scalar" version, like is_scalar_atomic() which checks that the length is 1.
+
+# Vector recycling, the shorter vector is repeated, or recycled, to the same length as the longer vector.
+# in tidyverse, the vectorised functions will throw errors when you recycle anything other than a scalar. If you do want to recycle, you'll need to do it yourself with rep().
+tibble(x = 1:4, y = 1:2) # will throw an error because the variables are not of the same length.
+tibble(x = 1:4, y = rep(1:2, 2))
+
+# Naming vectors
+c(x = 1, y = 2, z = 4) # name it during creation
+set_names(1:3, c("a", "b", "c"))
+
+# Subsetting
+x <- c("one", "two", "three", "four", "five")
+# subsetting with either positive or negative numbers. you can't mix them up
+x[c(1,1,5,5,5,2)]
+x[c(-1,-3,-5)]
+x[c(1,-1)] # error message
+x[0] # it returns no values
+# Subsetting with a logical vector keeps all values corresponding to a TRUE value. 
+x <- c(10, 3, NA, 5, 8, 1, NA)
+x[!is.na(x)]
+x[x %% 2 == 0] # all even (or missing) values of x
+# If you have a named vector, you can subset it with a character vector
+x <- c(abc = 1, def = 2, xyz = 5)
+x[c("xyz", "def")]
+# the simplest type of subsetting is nothing, x[], which returns the complete x
+# There is an important variation of [ called [[. [[ only ever extracts a single element, and always drops names. It’s a good idea to use it whenever you want to make it clear that you’re extracting a single item, as in a for loop. 
+```
+
+# Exercise
+```{r}
+# 1. What does mean(is.na(x)) tell you about a vector x? What about sum(!is.finite(x))?
+x <- c(1,2,3,NA,Inf,4,-Inf)
+mean(is.na(x)) # it tells you the proportion of NA in x
+sum(!is.finite(x)) # tells you how many NA and infinites in x
+
+# 2. Carefully read the documentation of is.vector(). What does it actually test for? Why does is.atomic() not agree with the definition of atomic vectors above?
+is.vector(x, mode = "any"); is.vector(x, mode = "numeric") # or mode = "integer", mode = "double", etc. 
+is.atomic(x) # test if a vector is of an atomic type or has a recursive structure.
+
+# 3. Compare and contrast setNames() with purrr::set_names().
+# setNames() sets the names in an object; set_names() sets the names to a vector
+
+# 4. Create functions that take a vector as input and returns:
+return_last <- function(x){
+  n = length(x)
+  x[[n]]
+}
+return_last(c(NA, 2,3,Inf))
+
+return_even_pos <- function(x){
+  if(length(x) <= 1){
+    "The vector is not long enough"
+  }else{
+    order <- seq_along(x)
+    x[order %% 2 == 0]
+  }
+}
+return_even_pos(c(1))
+return_even_pos(c(1,2,3,4,5))
+return_even_pos(c())
+
+drop_last <- function(x){
+  if(length(x) == 0){
+    "The vector is not long enough"
+  }else{
+    x[-length(x)]
+  }
+}
+drop_last(c())
+drop_last(c(1))
+drop_last(c(1,2,3,4,5))
+
+return_even <- function(x){
+   if(length(x) <= 1){
+    "The vector is not long enough"
+   }else{
+     x[x %% 2 == 0 & !is.na(x)]
+   }
+}
+return_even(c(1))
+return_even(0)
+return_even(c(1,2,3,4,5,6,7,NA))
+
+# 5. Why is x[-which(x > 0)] not the same as x[x <= 0]?
+# they treat missing values (NaN) differently. 
+x <- c(1,-2,4,-6,-7,8,9,NA,Inf,-Inf,0, NaN)
+x[-which(x > 0)]
+x[x <= 0]
+
+# 6. What happens when you subset with a positive integer that’s bigger than the length of the vector? What happens when you subset with a name that doesn’t exist?
+x <- c(1,2,3)
+x[c(2,4)] # it will give NA.
+x <- c(abc = 2, def = 3)
+x["hij"] # it will give NA.
+```
+
+# Recursive vectors (lists)
+```{r}
+# create a list using list()
+x <- list(1, 2, 3)
+x
+str(x) # it's very useful because it focuses on the structure, not the contents.
+
+x_named <- list(a = 1, b = 2, c = 3)
+str(x_named)
+
+# list can contain a mix of objects
+y <- list("a", 1L, 1.5, TRUE)
+str(y)
+
+# list can even contains other lists
+z <- list(list(1, 2), list(3, 4))
+str(z)
+
+# Subsetting
+a <- list(a = 1:3, b = "a string", c = pi, d = list(-1, -5))
+# [ extracts a sub-list. The result will always be a list
+str(a[1:2])
+str(a[4])
+
+# [[ extracts a single component from a list. It removes a level of hierarchy from the list.
+str(a[[1]])
+str(a[[4]])
+
+# $ is a shorthand for extracting named elements of a list. It works similarly to [[ except that you don’t need to use quotes.
+a$a
+```
+
+# Exercise
+```{r}
+# 1. Draw the following lists as nested sets:
+
+# 2. What happens if you subset a tibble as if you’re subsetting a list? What are the key differences between a list and a tibble?
+# the elements of a tibble must have the same length. 
+```
+
+# Attributes
+```{r}
+# You can get and set individual attribute values with attr() or see them all at once with attributes().
+x <- 1:10
+attr(x, "greeting") <- "Hi"
+attr(x, "farewell") <- "Bye"
+attributes(x)
+```
+
+# Augmented vectors
+```{r}
+# Factors
+# Factors are built on top of integers, and have a levels attribute:
+x <- factor(c("ab", "cd", "ab"), levels = c("ab", "cd", "ef"))
+typeof(x) # returns integer, because factors are built on top of integers
+attributes(x) # it has two attributes: levels and class
+
+# Dates and date-times
+x <- as.Date("1971-01-01")
+typeof(x)
+attributes(x)
+
+x <- lubridate::ymd_hm("1970-01-01 01:00")
+attr(x, "tzone") <- "US/Pacific"
+x
+attr(x, "tzone") <- "US/Eastern"
+x # the tzone attribute is optional. it controls how the time is printed, not what the absolute time it refers to.
+
+# There is another type of date-times called POSIXlt. These are built on top of named lists:
+y <- as.POSIXlt(x)
+typeof(y)
+attributes(y)
+```
+
+# Tibbles
+```{r}
+# Tibbles are augmented lists: they have class “tbl_df” + “tbl” + “data.frame”, and names (column) and row.names attributes:
+tb <- tibble::tibble(x = 1:5, y = 5:1)
+typeof(tb)
+attributes(tb)
+```
+
+# Exercises
+```{r}
+# 1. What does hms::hms(3600) return? How does it print? What primitive type is the augmented vector built on top of? What attributes does it use?
+hms::hms(3600)
+attributes(hms::hms(3600))
+
+# 2. Try and make a tibble that has columns with different lengths. What happens?
+tibble:tibble(x = rep(1:2, 2), y = 1:5) # it will throw an error message
+
+# 3. Based on the definition above, is it ok to have a list as a column of a tibble? Yes, it's fine.
+```
